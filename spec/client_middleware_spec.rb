@@ -9,12 +9,12 @@ describe SidekiqStatus::ClientMiddleware do
       end
 
       it "accepts a worker class" do
-        subject.call(TestWorker1, {}, nil) do
+        subject.call(TestWorker1, {}, nil, nil) do
         end
       end
 
       it "accepts a worker name string" do
-        subject.call("TestWorker1", {}, nil) do
+        subject.call("TestWorker1", {}, nil, nil) do
         end
       end
     end
@@ -23,7 +23,7 @@ describe SidekiqStatus::ClientMiddleware do
   it "does not create container for scheduled job" do
     SidekiqStatus::Container.should_not_receive(:create)
 
-    subject.call("TestWorker1", { "at" => Time.now }, nil) do
+    subject.call("TestWorker1", { "at" => Time.now }, nil, nil) do
     end
   end
 end
