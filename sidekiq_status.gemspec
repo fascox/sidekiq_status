@@ -19,7 +19,8 @@ Gem::Specification.new do |gem|
   gem.add_runtime_dependency('sidekiq', '>= 3.0.0', '< 3.3')
 
   gem.add_development_dependency("activesupport")
-  gem.add_development_dependency('rspec', '2.14.1')
+  gem.add_development_dependency('rspec', '3.0.0')
+  gem.add_development_dependency('rspec-its', '1.0.1')
   gem.add_development_dependency("simplecov")
   gem.add_development_dependency("rake")
   gem.add_development_dependency("timecop")

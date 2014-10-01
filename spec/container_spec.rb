@@ -102,7 +102,7 @@ describe SidekiqStatus::Container do
     test_container(container, described_class::DEFAULTS.reject{|k, v| k == 'args' }, jid)
 
     Sidekiq.redis do |conn|
-      conn.exists(status_key).should be_true
+      conn.exists(status_key).should be_truthy
     end
   end
 
@@ -168,14 +168,14 @@ describe SidekiqStatus::Container do
     container.delete
 
     Sidekiq.redis do |conn|
-      conn.exists(status_key).should be_false
+      conn.exists(status_key).should be_falsey
       conn.zscore(described_class.kill_key, jid).should be_nil
     end
   end
 
   specify "#request_kill, #should_kill?, #killable?" do
     container = described_class.new(jid)
-    container.kill_requested?.should be_false
+    container.kill_requested?.should be_falsey
     container.should be_killable
 
     Sidekiq.redis do |conn|
@@ -302,10 +302,10 @@ describe SidekiqStatus::Container do
       context "status is #{status_name1}" do
         subject{ described_class.create().tap{|c| c.status = status_name1} }
 
-        its("#{status_name1}?") { should be_true }
+        its("#{status_name1}?") { should be_truthy }
 
         (described_class::STATUS_NAMES - [status_name1]).each do |status_name2|
-          its("#{status_name2}?") { should be_false }
+          its("#{status_name2}?") { should be_falsey }
         end
       end
     end
