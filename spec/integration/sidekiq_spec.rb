@@ -30,13 +30,13 @@ describe SidekiqStatus::Worker do
       some_value = 'some_value'
       jid = TestWorker1.perform_async(some_value)
       container = SidekiqStatus::Container.load(jid)
-      container.should be_waiting
+      expect(container).to be_waiting
 
       with_sidekiq_running do
         wait{ container.reload.complete? }
 
-        container.total.should == 200
-        container.payload.should == some_value
+        expect(container.total).to eq(200)
+        expect(container.payload).to eq(some_value)
       end
     end
 
@@ -45,23 +45,23 @@ describe SidekiqStatus::Worker do
 
       jid = TestWorker2.perform_async(redis_key)
       container = SidekiqStatus::Container.load(jid)
-      container.should be_waiting
+      expect(container).to be_waiting
 
       with_sidekiq_running do
         wait{ container.reload.working? }
 
         Sidekiq.redis{ |conn| conn.set(redis_key, 10) }
         wait{  container.reload.at == 10 }
-        container.message.should == 'Some message at 10'
+        expect(container.message).to eq('Some message at 10')
 
         Sidekiq.redis{ |conn| conn.set(redis_key, 50) }
         wait{ container.reload.at == 50 }
-        container.message.should == 'Some message at 50'
+        expect(container.message).to eq('Some message at 50')
 
         Sidekiq.redis{ |conn| conn.set(redis_key, 'stop') }
         wait{ container.reload.complete? }
-        container.should be_complete
-        container.message.should be_nil
+        expect(container).to be_complete
+        expect(container.message).to be_nil
       end
     end
   end

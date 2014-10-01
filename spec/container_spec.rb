@@ -3,11 +3,11 @@ require 'spec_helper'
 
 def test_container(container, hash, jid = nil)
   hash.reject { |k, v| k == :last_updated_at }.find do |k, v|
-    container.send(k).should == v
+    expect(container.send(k)).to eq(v)
   end
 
-  container.last_updated_at.should == Time.at(hash['last_updated_at']) if hash['last_updated_at']
-  container.jid.should == jid if jid
+  expect(container.last_updated_at).to eq(Time.at(hash['last_updated_at'])) if hash['last_updated_at']
+  expect(container.jid).to eq(jid) if jid
 end
 
 
@@ -32,11 +32,11 @@ describe SidekiqStatus::Container do
 
   specify ".status_key" do
     jid = SecureRandom.base64
-    described_class.status_key(jid).should == "sidekiq_status:#{jid}"
+    expect(described_class.status_key(jid)).to eq("sidekiq_status:#{jid}")
   end
 
   specify ".kill_key" do
-    described_class.kill_key.should == described_class::KILL_KEY
+    expect(described_class.kill_key).to eq(described_class::KILL_KEY)
   end
 
 
@@ -52,57 +52,57 @@ describe SidekiqStatus::Container do
     end
 
     specify ".size" do
-      described_class.size.should == containers.size
+      expect(described_class.size).to eq(containers.size)
     end
 
     specify ".status_jids" do
       expected = containers.values.map(&:jid).map{ |jid| [jid, anything()] }
-      described_class.status_jids.should =~ expected
-      described_class.status_jids(0, 0).size.should == 1
+      expect(described_class.status_jids).to match_array(expected)
+      expect(described_class.status_jids(0, 0).size).to eq(1)
     end
 
     specify ".statuses" do
-      described_class.statuses.should be_all{|st| st.is_a?(described_class) }
-      described_class.statuses.size.should == containers.size
-      described_class.statuses(0, 0).size.should == 1
+      expect(described_class.statuses).to be_all{|st| st.is_a?(described_class) }
+      expect(described_class.statuses.size).to eq(containers.size)
+      expect(described_class.statuses(0, 0).size).to eq(1)
     end
 
     describe ".delete" do
       before do
-        described_class.status_jids.map(&:first).should =~ containers.values.map(&:jid)
+        expect(described_class.status_jids.map(&:first)).to match_array(containers.values.map(&:jid))
       end
 
       specify "deletes jobs in specific status" do
         statuses_to_delete = ['waiting', 'complete']
         described_class.delete(statuses_to_delete)
 
-        described_class.status_jids.map(&:first).should =~ containers.
+        expect(described_class.status_jids.map(&:first)).to match_array(containers.
             reject{ |status_name, container|  statuses_to_delete.include?(status_name) }.
             values.
-            map(&:jid)
+            map(&:jid))
       end
 
       specify "deletes jobs in all statuses" do
         described_class.delete()
 
-        described_class.status_jids.should be_empty
+        expect(described_class.status_jids).to be_empty
       end
     end
   end
 
   specify ".create" do
-    SecureRandom.should_receive(:hex).with(12).and_return(jid)
+    expect(SecureRandom).to receive(:hex).with(12).and_return(jid)
     args = ['arg1', 'arg2', {arg3: 'val3'}]
 
     container = described_class.create('args' => args)
-    container.should be_a(described_class)
-    container.args.should == args
+    expect(container).to be_a(described_class)
+    expect(container.args).to eq(args)
 
     # Check default values are set
     test_container(container, described_class::DEFAULTS.reject{|k, v| k == 'args' }, jid)
 
     Sidekiq.redis do |conn|
-      conn.exists(status_key).should be_truthy
+      expect(conn.exists(status_key)).to be_truthy
     end
   end
 
@@ -133,8 +133,8 @@ describe SidekiqStatus::Container do
       described_class.load(jid)
 
       Sidekiq.redis do |conn|
-        conn.zscore(described_class.kill_key, 'a').should be_nil
-        conn.zscore(described_class.kill_key, 'b').should_not be_nil
+        expect(conn.zscore(described_class.kill_key, 'a')).to be_nil
+        expect(conn.zscore(described_class.kill_key, 'b')).not_to be_nil
       end
     end
   end
@@ -143,7 +143,7 @@ describe SidekiqStatus::Container do
     hash = sample_json_hash.reject{ |k, v| k == 'last_updated_at' }
     container = described_class.new(jid, hash)
     dump = container.send(:dump)
-    dump.should == hash.merge('last_updated_at' => Time.now.to_i)
+    expect(dump).to eq(hash.merge('last_updated_at' => Time.now.to_i))
   end
 
   specify "#save saves container to Redis" do
@@ -153,9 +153,9 @@ describe SidekiqStatus::Container do
     result = Sidekiq.redis{ |conn| conn.get(status_key) }
     result = MultiJson.load(result)
 
-    result.should == hash.merge('last_updated_at' => Time.now.to_i)
+    expect(result).to eq(hash.merge('last_updated_at' => Time.now.to_i))
 
-    Sidekiq.redis{ |conn| conn.ttl(status_key).should >= 0 }
+    Sidekiq.redis{ |conn| expect(conn.ttl(status_key)).to be >= 0 }
   end
 
   specify "#delete" do
@@ -168,58 +168,58 @@ describe SidekiqStatus::Container do
     container.delete
 
     Sidekiq.redis do |conn|
-      conn.exists(status_key).should be_falsey
-      conn.zscore(described_class.kill_key, jid).should be_nil
+      expect(conn.exists(status_key)).to be_falsey
+      expect(conn.zscore(described_class.kill_key, jid)).to be_nil
     end
   end
 
   specify "#request_kill, #should_kill?, #killable?" do
     container = described_class.new(jid)
-    container.kill_requested?.should be_falsey
-    container.should be_killable
+    expect(container.kill_requested?).to be_falsey
+    expect(container).to be_killable
 
     Sidekiq.redis do |conn|
-      conn.zscore(described_class.kill_key, jid).should be_nil
+      expect(conn.zscore(described_class.kill_key, jid)).to be_nil
     end
 
 
     container.request_kill
 
     Sidekiq.redis do |conn|
-      conn.zscore(described_class.kill_key, jid).should == Time.now.to_i
+      expect(conn.zscore(described_class.kill_key, jid)).to eq(Time.now.to_i)
     end
-    container.should be_kill_requested
-    container.should_not be_killable
+    expect(container).to be_kill_requested
+    expect(container).not_to be_killable
   end
 
   specify "#kill" do
     container = described_class.new(jid)
     container.request_kill
     Sidekiq.redis do |conn|
-      conn.zscore(described_class.kill_key, jid).should == Time.now.to_i
+      expect(conn.zscore(described_class.kill_key, jid)).to eq(Time.now.to_i)
     end
-    container.status.should_not == 'killed'
+    expect(container.status).not_to eq('killed')
 
 
     container.kill
 
     Sidekiq.redis do |conn|
-      conn.zscore(described_class.kill_key, jid).should be_nil
+      expect(conn.zscore(described_class.kill_key, jid)).to be_nil
     end
 
-    container.status.should == 'killed'
-    described_class.load(jid).status.should == 'killed'
+    expect(container.status).to eq('killed')
+    expect(described_class.load(jid).status).to eq('killed')
   end
 
   specify "#pct_complete" do
     container = described_class.new(jid)
     container.at = 1
     container.total = 100
-    container.pct_complete.should == 1
+    expect(container.pct_complete).to eq(1)
 
     container.at = 5
     container.total = 200
-    container.pct_complete.should == 3 # 2.5.round(0) => 3
+    expect(container.pct_complete).to eq(3) # 2.5.round(0) => 3
   end
 
   context "setters" do
@@ -229,8 +229,8 @@ describe SidekiqStatus::Container do
       it "sets numeric value" do
         container.total = 100
         container.at = 3
-        container.at.should == 3
-        container.total.should == 100
+        expect(container.at).to eq(3)
+        expect(container.total).to eq(100)
       end
 
       it "raises ArgumentError otherwise" do
@@ -240,14 +240,14 @@ describe SidekiqStatus::Container do
       it "adjusts total if its less than new at" do
         container.total = 200
         container.at = 250
-        container.total.should == 250
+        expect(container.total).to eq(250)
       end
     end
 
     describe "#total=" do
       it "sets numeric value" do
         container.total = 50
-        container.total.should == 50
+        expect(container.total).to eq(50)
       end
 
       it "raises ArgumentError otherwise" do
@@ -259,7 +259,7 @@ describe SidekiqStatus::Container do
       described_class::STATUS_NAMES.each do |status|
         it "sets status #{status.inspect}" do
           container.status = status
-          container.status.should == status
+          expect(container.status).to eq(status)
         end
       end
 
@@ -270,28 +270,28 @@ describe SidekiqStatus::Container do
 
     specify "#message=" do
       container.message = 'abcd'
-      container.message.should == 'abcd'
+      expect(container.message).to eq('abcd')
 
       container.message = nil
-      container.message.should be_nil
+      expect(container.message).to be_nil
 
       message = double('Message', :to_s => 'to_s')
       container.message = message
-      container.message.should == 'to_s'
+      expect(container.message).to eq('to_s')
     end
 
     specify "#payload=" do
-      container.should respond_to(:payload=)
+      expect(container).to respond_to(:payload=)
     end
 
     specify "update_attributes" do
       container.update_attributes(:at => 1, 'total' => 3, :message => 'msg', 'status' => 'working')
       reloaded_container = described_class.load(container.jid)
 
-      reloaded_container.at.should == 1
-      reloaded_container.total.should == 3
-      reloaded_container.message.should == 'msg'
-      reloaded_container.status.should == 'working'
+      expect(reloaded_container.at).to eq(1)
+      expect(reloaded_container.total).to eq(3)
+      expect(reloaded_container.message).to eq('msg')
+      expect(reloaded_container.status).to eq('working')
 
       expect{ container.update_attributes(:at => 'Invalid') }.to raise_exception(ArgumentError)
     end

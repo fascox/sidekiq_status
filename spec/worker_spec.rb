@@ -16,10 +16,10 @@ describe Sidekiq::Worker do
   describe ".perform_async" do
     it "invokes middleware which creates sidekiq_status container with the same jid" do
       jid = SomeWorker.perform_async(*args)
-      jid.should be_a(String)
+      expect(jid).to be_a(String)
 
       container = SidekiqStatus::Container.load(jid)
-      container.args.should == args
+      expect(container.args).to eq(args)
     end
   end
 
@@ -27,7 +27,7 @@ describe Sidekiq::Worker do
     let(:worker) { SomeWorker.new }
 
     it "receives jid as parameters, loads container and runs original perform with enqueued args" do
-      worker.should_receive(:some_method).with(*args)
+      expect(worker).to receive(:some_method).with(*args)
       jid = SomeWorker.perform_async(*args)
       worker.perform(jid)
     end
@@ -44,19 +44,19 @@ describe Sidekiq::Worker do
       jid = SomeWorker.perform_async(*args)
       worker.perform(jid)
 
-      has_been_run.should be_truthy
-      worker.status_container.reload.status.should == 'complete'
+      expect(has_been_run).to be_truthy
+      expect(worker.status_container.reload.status).to eq('complete')
     end
 
     it "intercepts failures and set status to 'failed' then re-raises the exception" do
       exc = RuntimeError.new('Some error')
-      worker.stub(:some_method).and_raise(exc)
+      allow(worker).to receive(:some_method).and_raise(exc)
 
       jid = SomeWorker.perform_async(*args)
-      expect{ worker.perform(jid) }.to raise_exception{ |error| error.object_id.should == exc.object_id }
+      expect{ worker.perform(jid) }.to raise_exception{ |error| expect(error.object_id).to eq(exc.object_id) }
 
       container = SidekiqStatus::Container.load(jid)
-      container.status.should == 'failed'
+      expect(container.status).to eq('failed')
     end
 
     it "sets status to 'complete' if finishes without errors" do
@@ -64,7 +64,7 @@ describe Sidekiq::Worker do
       worker.perform(jid)
 
       container = SidekiqStatus::Container.load(jid)
-      container.status.should == 'complete'
+      expect(container.status).to eq('complete')
     end
 
     it "handles kill requests if kill requested before job execution" do
@@ -75,13 +75,13 @@ describe Sidekiq::Worker do
       worker.perform(jid)
 
       container.reload
-      container.status.should == 'killed'
+      expect(container.status).to eq('killed')
     end
 
     it "handles kill requests if kill requested amid job execution" do
       jid = SomeWorker.perform_async(*args)
       container = SidekiqStatus::Container.load(jid)
-      container.status.should == 'waiting'
+      expect(container.status).to eq('waiting')
 
       i = 0
       i_mut = Mutex.new
@@ -103,7 +103,7 @@ describe Sidekiq::Worker do
 
       killer_thread = Thread.new do
         sleep(0.01) while i < 100
-        container.reload.status.should == 'working'
+        expect(container.reload.status).to eq('working')
         container.request_kill
       end
 
@@ -111,8 +111,8 @@ describe Sidekiq::Worker do
       killer_thread.join(1)
 
       container.reload
-      container.status.should == 'killed'
-      container.at.should >= 100
+      expect(container.status).to eq('killed')
+      expect(container.at).to be >= 100
     end
 
     it "allows to set at, total and customer payload from the worker" do
@@ -134,10 +134,10 @@ describe Sidekiq::Worker do
       checker_thread = Thread.new do
         wait{ container.reload.working? && container.at == 50 }
 
-        container.at.should      == 50
-        container.total.should   == 200
-        container.message.should == '25% done'
-        container.payload        == 'some payload'
+        expect(container.at).to eq(50)
+        expect(container.total).to eq(200)
+        expect(container.message).to eq('25% done')
+        container.payload == 'some payload'
 
         lets_stop = true
       end
@@ -147,8 +147,8 @@ describe Sidekiq::Worker do
 
       wait{ container.reload.complete? }
 
-      container.payload.should == 'some payload'
-      container.message.should be_nil
+      expect(container.payload).to eq('some payload')
+      expect(container.message).to be_nil
     end
   end
 end
