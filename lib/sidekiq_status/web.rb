@@ -1,3 +1,5 @@
+require 'sidekiq_status' unless defined?(SidekiqStatus)
+
 module SidekiqStatus
   # Hook into *Sidekiq::Web* Sinatra app which adds a new "/statuses" page
   module Web
